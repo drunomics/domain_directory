@@ -1,0 +1,37 @@
+<?php
+
+/**
+ * @file
+ * Domain Directory install.
+ */
+
+/**
+ * Implements hook_schema().
+ */
+function domain_dir_schema() {
+  $schema['domain_dir'] = array(
+    'description' => 'Stores directory equivalents of domains.',
+    'fields' => array(
+      'domain_id' => array(
+        'description' => 'Domain id for this URL',
+        'type' => 'int',
+        'not null' => TRUE,
+      ),
+      'dir' => array(
+        'description' => 'System directory string.',
+        'type' => 'varchar',
+        'length' => '255',
+        'not null' => TRUE,
+      ),
+      'is_default' => array(
+        'description' => 'Indicates the default path for this domain.',
+        'type' => 'int',
+        'size' => 'tiny',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+    ),
+    'primary key' => array('domain_id', 'dir'),
+  );
+  return $schema;
+}

@@ -1,0 +1,124 @@
+<?php
+
+/**
+ * @file
+ * Domain Directory module file.
+ */
+
+/**
+ * Implements hook_url_inbound_alter().
+ */
+
+/**
+ * Implements hook_domain_bootstrap_lookup().
+ */
+function domain_dir_domain_bootstrap_lookup($domain) {
+  global $base_path;
+  $request = str_replace($base_path, '', request_uri());
+  $_path = explode('/', $request);
+  if (empty($_path[0])) {
+    return;
+  }
+  $dir = $_path[0];
+  $active = domain_dir_check($dir);
+  if (empty($active) && $active !== 0) {
+    return;
+  }
+  $new_domain = domain_lookup($active);
+  if ($new_domain != -1) {
+    $domain = $new_domain;
+    $domain['domain_dir'] = $dir;
+  }
+  return $domain;
+}
+
+function domain_dir_check($dir) {
+  $return = &drupal_static(__FUNCTION__);
+  if (empty($dir)) {
+    return NULL;
+  }
+  if (isset($return[$dir])) {
+    return $return[$dir];
+  }
+  $return[$dir] = db_query("SELECT domain_id FROM {domain_dir} WHERE dir = :dir", array(':dir' => $dir))->fetchField();
+  return $return[$dir];
+}
+
+/**
+ * Implements hook_url_inbound_alter().
+ *
+ * Map the incoming directory to a domain path.
+ */
+function domain_dir_url_inbound_alter(&$path, $original_path, $path_language) {
+  $_domain = domain_get_domain();
+  if (isset($_domain['domain_dir'])) {
+    $_path = explode('/', $original_path);
+    if (empty($_path[0]) || $_path[0] != $_domain['domain_dir']) {
+      return;
+    }
+    unset($_path[0]);
+    if (empty($_path)) {
+      $path = variable_get('site_frontpage', 'node');
+    }
+    else {
+      $path = implode('/', $_path);
+    }
+  }
+}
+
+function domain_dir_domainload(&$domain) {
+  global $base_path, $base_url;
+  $dirs = &drupal_static(__FUNCTION__);
+  if (!isset($dirs)) {
+    $result = db_query("SELECT domain_id, dir FROM {domain_dir}")->FetchAll();
+    foreach ($result as $data) {
+      $dirs[$data->domain_id][] = $data->dir;
+    }
+  }
+  if (isset($dirs[$domain['domain_id']]) && !isset($domain['canonical_subdomain'])) {
+    $temp = $base_url;
+    $base_url = '';
+    $base = $dirs[$domain['domain_id']][0];
+    $subdomain = explode('.', $domain['subdomain']);
+    foreach ($dirs[$domain['domain_id']] as $dir) {
+      if ($dir == $subdomain[0]) {
+        $domain['domain_dir'] = $dir;
+        $domain['canonical_subdomain'] = $domain['subdomain'];
+        if (empty($base_path)) {
+          $domain['subdomain'] = str_replace($dir . '.', '', $domain['subdomain']) . '/' . $dir;
+          $domain['path'] = domain_get_path($domain);
+        }
+        else {
+          $domain['subdomain'] = str_replace($dir . '.', '', $domain['subdomain']) . $base_path . $dir . '/';
+          $domain['path'] = domain_get_path($domain);
+        }
+      }
+    }
+    $base_url = $temp;
+  }
+}
+
+function domain_dir_url_outbound_alter(&$path, &$options, $original_path) {
+  global $base_url;
+  $_domain = domain_get_domain();
+  if (isset($_domain['domain_dir'])) {
+    if (empty($original_path) || $original_path == '<front>' || $original_path == variable_get('site_frontpage', 'node')) {
+      $path = $_domain['domain_dir'];
+    }
+    elseif (empty($options['absolute'])) {
+      $path = $_domain['domain_dir'] . '/' . $path;
+    }
+    else {
+      $path = str_replace($base_url . '/' . $_domain['domain_dir'], $base_url, $path);
+      /*
+      $_path = explode('/', $original_path);
+      if (end($_path) == $_domain['domain_dir']) {
+        array_pop($_path);
+        $path = implode('/', $_path);
+      }*/
+    }
+  }
+}
+
+/*function domain_dir_domainpath($domain_id, &$path, $options, $original_path) {
+}*/

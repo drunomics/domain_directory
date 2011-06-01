@@ -1,0 +1,7 @@
+name = Domain Directory
+description = Allows example.com/foo to emulate foo.example.com
+package = Domain Access
+dependencies[] = domain
+core = 7.x
+files[] = domain_dir.install
+files[] = domain_dir.module
