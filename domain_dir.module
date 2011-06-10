@@ -118,9 +118,7 @@ function domain_dir_domain_load(&$domain) {
 
 /**
  * Implements hook_url_outbound_alter().
- *
- * @TODO: Remove for hook_domain_path()?
-
+ */
 function domain_dir_url_outbound_alter(&$path, &$options, $original_path) {
   global $base_url;
   $_domain = domain_get_domain();
@@ -135,44 +133,43 @@ function domain_dir_url_outbound_alter(&$path, &$options, $original_path) {
       $path = str_replace($base_url . '/' . $_domain['domain_dir'], $base_url, $path);
     }
   }
+  // Ensure that $base_path is not included twice.
   $base_path = base_path();
   if ($base_path != '/') {
     $path = str_replace('/' . $base_path, '/', $path);
   }
 }
- */
+
 /**
- * API wrapper function for 7.x.2 compatibility.
+ * Adjust the domain editing form.
  */
-function domain_dir_domainpath($domain_id, &$path, &$options, $original_path) {
-  domain_dir_domain_path($domain_id, $path, $options, $original_path);
+function domain_dir_form_domain_form_alter(&$form, &$form_state) {
+  if (isset($form['#domain']['canonical_subdomain'])) {
+    $form['domain']['subdomain']['#default_value'] = $form['#domain']['canonical_subdomain'];
+  }
+  $form['domain']['domain_dir'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Directory path'),
+    '#default_value' => isset($form['#domain']['domain_dir']) ? $form['#domain']['domain_dir'] : '',
+    '#description' => t('Alternate directory path to use for this domain record. If using a directory path, register the domain as <em>path.example.com</em>, where example.com is your primary domain.'),
+    '#weight' => -1,
+  );
+  $form['#submit'][] = 'domain_dir_domain_form_submit';
 }
 
 /**
- * Implements hook_domain_path().
+ * Save domain directories.
  */
-function domain_dir_domain_path($domain_id, &$path, &$options, $original_path) {
-  $directories = &drupal_static(__FUNCTION__);
-  $domains = domain_domains();
-  if (!isset($directories)) {
-    $directories = db_query("SELECT domain_id, dir FROM {domain_dir}")->fetchAllAssoc('domain_id');
-  }
-  $base_path = base_path();
-  if ($base_path != '/') {
-    $path = str_replace('/' . $base_path, '/', $path);
-  };
-  if (empty($options['external'])) {
-    return;
-  }
-  foreach ($domains as $domain) {
-    if (substr_count($path, $domain['path']) > 0 && isset($domain['domain_dir'])) {
-      $path = str_replace($domain['domain_dir'] . '/' . $domain['domain_dir'] . '/', $domain['domain_dir'] . '/', $path);
-      foreach ($directories as $directory) {
-        if ($directory->domain_id != $domain['domain_id']) {
-          $path = str_replace($directory->dir . '/', '', $path);
-        }
-      }
-    }
+function domain_dir_domain_form_submit(&$form, &$form_state) {
+  db_delete('domain_dir')
+    ->condition('domain_id', $form_state['values']['domain_id'])
+    ->execute();
+  if (!empty($form_state['values']['domain_dir'])) {
+    $record = array(
+      'domain_id' => $form_state['values']['domain_id'],
+      'dir' => $form_state['values']['domain_dir'],
+      'is_default' => 0,
+    );
+    drupal_write_record('domain_dir', $record);
   }
 }
-
