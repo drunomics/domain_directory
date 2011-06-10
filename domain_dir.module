@@ -6,10 +6,6 @@
  */
 
 /**
- * Implements hook_url_inbound_alter().
- */
-
-/**
  * Implements hook_domain_bootstrap_lookup().
  */
 function domain_dir_domain_bootstrap_lookup($domain) {
@@ -21,7 +17,7 @@ function domain_dir_domain_bootstrap_lookup($domain) {
   }
   $dir = $_path[0];
   $active = domain_dir_check($dir);
-  if (empty($active) && $active !== 0) {
+  if ($active === FALSE) {
     return;
   }
   $new_domain = domain_lookup($active);
@@ -32,6 +28,15 @@ function domain_dir_domain_bootstrap_lookup($domain) {
   return $domain;
 }
 
+/**
+ * Checks for directory / path matching on inbound request.
+ *
+ * @param $dir
+ *  The initial path of the request (i.e. arg(0)).
+ *
+ * @return
+ *  A matching domain_id or FALSE.
+ */
 function domain_dir_check($dir) {
   $return = &drupal_static(__FUNCTION__);
   if (empty($dir)) {
@@ -63,10 +68,23 @@ function domain_dir_url_inbound_alter(&$path, $original_path, $path_language) {
     else {
       $path = implode('/', $_path);
     }
+    if ($source = drupal_lookup_path('source', $path, $path_language)) {
+      $path = $source;
+    }
   }
 }
 
+/**
+ * API wrapper callback for 7.x.2.
+ */
 function domain_dir_domainload(&$domain) {
+  domain_dir_domain_load($domain);
+}
+
+/**
+ * Implements hook_domain_load().
+ */
+function domain_dir_domain_load(&$domain) {
   global $base_path, $base_url;
   $dirs = &drupal_static(__FUNCTION__);
   if (!isset($dirs)) {
@@ -98,6 +116,11 @@ function domain_dir_domainload(&$domain) {
   }
 }
 
+/**
+ * Implements hook_url_outbound_alter().
+ *
+ * @TODO: Remove for hook_domain_path()?
+
 function domain_dir_url_outbound_alter(&$path, &$options, $original_path) {
   global $base_url;
   $_domain = domain_get_domain();
@@ -110,15 +133,46 @@ function domain_dir_url_outbound_alter(&$path, &$options, $original_path) {
     }
     else {
       $path = str_replace($base_url . '/' . $_domain['domain_dir'], $base_url, $path);
-      /*
-      $_path = explode('/', $original_path);
-      if (end($_path) == $_domain['domain_dir']) {
-        array_pop($_path);
-        $path = implode('/', $_path);
-      }*/
+    }
+  }
+  $base_path = base_path();
+  if ($base_path != '/') {
+    $path = str_replace('/' . $base_path, '/', $path);
+  }
+}
+ */
+/**
+ * API wrapper function for 7.x.2 compatibility.
+ */
+function domain_dir_domainpath($domain_id, &$path, &$options, $original_path) {
+  domain_dir_domain_path($domain_id, $path, $options, $original_path);
+}
+
+/**
+ * Implements hook_domain_path().
+ */
+function domain_dir_domain_path($domain_id, &$path, &$options, $original_path) {
+  $directories = &drupal_static(__FUNCTION__);
+  $domains = domain_domains();
+  if (!isset($directories)) {
+    $directories = db_query("SELECT domain_id, dir FROM {domain_dir}")->fetchAllAssoc('domain_id');
+  }
+  $base_path = base_path();
+  if ($base_path != '/') {
+    $path = str_replace('/' . $base_path, '/', $path);
+  };
+  if (empty($options['external'])) {
+    return;
+  }
+  foreach ($domains as $domain) {
+    if (substr_count($path, $domain['path']) > 0 && isset($domain['domain_dir'])) {
+      $path = str_replace($domain['domain_dir'] . '/' . $domain['domain_dir'] . '/', $domain['domain_dir'] . '/', $path);
+      foreach ($directories as $directory) {
+        if ($directory->domain_id != $domain['domain_id']) {
+          $path = str_replace($directory->dir . '/', '', $path);
+        }
+      }
     }
   }
 }
 
-/*function domain_dir_domainpath($domain_id, &$path, $options, $original_path) {
-}*/
