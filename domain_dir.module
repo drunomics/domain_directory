@@ -10,7 +10,8 @@
  */
 function domain_dir_domain_bootstrap_lookup($domain) {
   global $base_path;
-  $request = str_replace($base_path, '', request_uri());
+  $full_uri = request_uri();
+  $request = substr($full_uri,strpos($full_uri,$base_path)+strlen($base_path));
   $_path = explode('/', $request);
   if (empty($_path[0])) {
     return;
