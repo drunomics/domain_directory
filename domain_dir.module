@@ -138,6 +138,13 @@ function domain_dir_url_outbound_alter(&$path, &$options, $original_path) {
   if ($base_path != '/') {
     $path = str_replace('/' . $base_path, '/', $path);
   }
+  if (isset($_domain['path']) && $path != $_domain['path'] && isset($_domain['domain_dir']) && substr($path, -1) == '/') {
+    $url = explode('/', rtrim($path, '/'));
+    if (end($url) == $_domain['domain_dir']) {
+      array_pop($url);
+      $path = implode('/', $url) . '/';
+    }
+  }
 }
 
 /**
@@ -151,7 +158,7 @@ function domain_dir_form_domain_form_alter(&$form, &$form_state) {
     '#type' => 'textfield',
     '#title' => t('Directory path'),
     '#default_value' => isset($form['#domain']['domain_dir']) ? $form['#domain']['domain_dir'] : '',
-    '#description' => t('Alternate directory path to use for this domain record. If using a directory path, register the domain as <em>path.example.com</em>, where example.com is your primary domain.'),
+    '#description' => t('Alternate directory path to use for this domain record. Do not include a leading or trailing slash. <p>If using a directory path, register the domain as <em>path.example.com</em>, where example.com is your primary domain.</p>'),
     '#weight' => -1,
   );
   $form['#submit'][] = 'domain_dir_domain_form_submit';
@@ -173,3 +180,5 @@ function domain_dir_domain_form_submit(&$form, &$form_state) {
     drupal_write_record('domain_dir', $record);
   }
 }
+
+
