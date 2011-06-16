@@ -127,11 +127,14 @@ function domain_dir_url_outbound_alter(&$path, &$options, $original_path) {
     if (empty($original_path) || $original_path == '<front>' || $original_path == variable_get('site_frontpage', 'node')) {
       $path = $_domain['domain_dir'];
     }
-    elseif (empty($options['absolute'])) {
-      $path = $_domain['domain_dir'] . '/' . $path;
-    }
-    else {
-      $path = str_replace($base_url . '/' . $_domain['domain_dir'], $base_url, $path);
+    //Deals with the fact that some absolute links aren't getting called with the absolute option set.
+    elseif (strpos($original_path,'http://')===FALSE && strpos($original_path,'https://')===FALSE || (!empty($options['absolute']) && $options['absolute']==FALSE)) {
+      if (empty($options['absolute'])) {
+        $path = $_domain['domain_dir'] . '/' . $path;
+      }
+      else {
+        $path = str_replace($base_url . '/' . $_domain['domain_dir'], $base_url, $path);
+      }
     }
   }
   // Ensure that $base_path is not included twice.
