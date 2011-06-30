@@ -103,6 +103,7 @@ function domain_dir_domain_load(&$domain) {
       if ($dir == $subdomain[0]) {
         $domain['domain_dir'] = $dir;
         $domain['canonical_subdomain'] = $domain['subdomain'];
+        $domain['canonical_path'] = $domain['path'];
         if (empty($base_path)) {
           $domain['subdomain'] = str_replace($dir . '.', '', $domain['subdomain']) . '/' . $dir;
           $domain['path'] = domain_get_path($domain);
@@ -121,32 +122,28 @@ function domain_dir_domain_load(&$domain) {
  * Implements hook_url_outbound_alter().
  */
 function domain_dir_url_outbound_alter(&$path, &$options, $original_path) {
-  global $base_url;
-  $_domain = domain_get_domain();
-  if (isset($_domain['domain_dir'])) {
-    if (empty($original_path) || $original_path == '<front>' || $original_path == variable_get('site_frontpage', 'node')) {
-      $path = $_domain['domain_dir'];
+  global $base_path;
+  $domain = domain_get_domain();
+  if (!isset($domain['domain_dir'])) {
+    $find = '/' . $base_path;
+    $path = str_replace($find, '/', $path);
+  }
+  elseif (!empty($options['absolute'])) {
+    $find = '/' . $base_path . $domain['domain_dir'];
+    if (substr_count($path, $find) > 0) {
+      $path = str_replace($find, '', $path);
     }
-    //Deals with the fact that some absolute links aren't getting called with the absolute option set.
-    elseif (strpos($original_path,'http://')===FALSE && strpos($original_path,'https://')===FALSE || (!empty($options['absolute']) && $options['absolute']==FALSE)) {
-      if (empty($options['absolute'])) {
-        $path = $_domain['domain_dir'] . '/' . $path;
-      }
-      else {
-        $path = str_replace($base_url . '/' . $_domain['domain_dir'], $base_url, $path);
-      }
+    else {
+      $find = $base_path . $domain['domain_dir'] .'/';
+      $path = str_replace($find, $base_path, $path);
     }
   }
-  // Ensure that $base_path is not included twice.
-  $base_path = base_path();
-  if ($base_path != '/') {
-    $path = str_replace('/' . $base_path, '/', $path);
-  }
-  if (isset($_domain['path']) && $path != $_domain['path'] && isset($_domain['domain_dir']) && substr($path, -1) == '/') {
-    $url = explode('/', rtrim($path, '/'));
-    if (end($url) == $_domain['domain_dir']) {
-      array_pop($url);
-      $path = implode('/', $url) . '/';
+  else {
+    if ($path == '<front>' || $path == variable_get('site_frontpage', 'node')) {
+      $path = $domain['domain_dir'];
+    }
+    else {
+      $path = $domain['domain_dir'] . '/' . $path;
     }
   }
 }
