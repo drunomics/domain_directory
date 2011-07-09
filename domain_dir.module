@@ -146,6 +146,10 @@ function domain_dir_url_outbound_alter(&$path, &$options, $original_path) {
       $path = $domain['domain_dir'] . '/' . $path;
     }
   }
+  // Handle destination=foo.
+  if (isset($domain['domain_dir']) && isset($options['query']['destination'])) {
+    $options['query']['destination'] = $domain['domain_dir'] . '/' . $options['query']['destination'];
+  }
 }
 
 /**
@@ -197,3 +201,14 @@ function domain_dir_domainupdate($op, $domain = array(), $form_state = array()) 
   }
 }
 
+/**
+ * Ensure that destinations are set properly.
+ *
+ * This fixes a known issue with the search form.
+ */
+function domain_dir_drupal_goto_alter(&$path, &$options, &$http_response_code) {
+  $_domain = domain_get_domain();
+  if (isset($_domain['domain_dir']) && empty($options['external']) && empty($options['absolute'])) {
+    $path = $_domain['domain_dir'] . '/' . $path;
+  }
+}
