@@ -123,6 +123,13 @@ function domain_dir_domain_load(&$domain) {
  */
 function domain_dir_url_outbound_alter(&$path, &$options, $original_path) {
   global $base_path;
+
+  // Ensure that we do not modify external links.
+  if (!empty($options['external']) && domain_dir_is_external($path)) {
+    return;
+  }
+
+  // Try to modify internal links properly.
   $domain = domain_get_domain();
   if (!isset($domain['domain_dir'])) {
     $find = '/' . $base_path;
@@ -146,10 +153,12 @@ function domain_dir_url_outbound_alter(&$path, &$options, $original_path) {
       $path = $domain['domain_dir'] . '/' . $path;
     }
   }
+
   // Handle destination=foo.
   if (isset($domain['domain_dir']) && isset($options['query']['destination'])) {
     $options['query']['destination'] = $domain['domain_dir'] . '/' . $options['query']['destination'];
   }
+
 }
 
 /**
@@ -211,4 +220,29 @@ function domain_dir_drupal_goto_alter(&$path, &$options, &$http_response_code) {
   if (isset($_domain['domain_dir']) && empty($options['external']) && empty($options['absolute'])) {
     $path = $_domain['domain_dir'] . '/' . $path;
   }
+}
+
+/**
+ * Determine if a URL is really external to our installation.
+ *
+ * @param $path
+ *  The path being rewritten.
+ *
+ * @return
+ *  Boolean TRUE or FALSE.
+ */
+function domain_dir_is_external($path) {
+  $list = &drupal_static(__FUNCTION__);
+  if (empty($list)) {
+    $domains = domain_domains();
+    foreach ($domains as $domain) {
+      $list[$domain['subdomain']] = $domain;
+    }
+  }
+  $parts = @parse_url($path);
+  $host = isset($parts['host']) ? strtolower($parts['host']) : '';
+  if (!isset($list[$host])) {
+    return TRUE;
+  }
+  return FALSE;
 }
