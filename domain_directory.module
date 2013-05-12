@@ -8,7 +8,7 @@
 /**
  * Implements hook_domain_bootstrap_lookup().
  */
-function domain_dir_domain_bootstrap_lookup($domain) {
+function domain_directory_domain_bootstrap_lookup($domain) {
   global $base_path;
   $full_uri = request_uri();
   $request = substr($full_uri,strpos($full_uri,$base_path)+strlen($base_path));
@@ -16,12 +16,12 @@ function domain_dir_domain_bootstrap_lookup($domain) {
   if (empty($_path[0])) {
     return;
   }
-  $dir = $_path[0];
-  $active = domain_dir_check($dir);
+  $directory = $_path[0];
+  $active = domain_directory_check($directory);
   if ($active === FALSE) {
     return;
   }
-  $domain['domain_dir'] = $dir;
+  $domain['directory'] = $directory;
 
   return $domain;
 }
@@ -29,22 +29,22 @@ function domain_dir_domain_bootstrap_lookup($domain) {
 /**
  * Checks for directory / path matching on inbound request.
  *
- * @param $dir
+ * @param $directory
  *  The initial path of the request (i.e. arg(0)).
  *
  * @return
  *  A matching domain_id or FALSE.
  */
-function domain_dir_check($dir) {
+function domain_directory_check($directory) {
   $return = &drupal_static(__FUNCTION__);
-  if (empty($dir)) {
+  if (empty($directory)) {
     return NULL;
   }
-  if (isset($return[$dir])) {
-    return $return[$dir];
+  if (isset($return[$directory])) {
+    return $return[$directory];
   }
-  $return[$dir] = db_query("SELECT domain_id FROM {domain_dir} WHERE dir = :dir", array(':dir' => $dir))->fetchField();
-  return $return[$dir];
+  $return[$directory] = db_query("SELECT domain_id FROM {domain_directory} WHERE directory = :directory", array(':directory' => $directory))->fetchField();
+  return $return[$directory];
 }
 
 /**
@@ -52,11 +52,11 @@ function domain_dir_check($dir) {
  *
  * Map the incoming directory to a domain path.
  */
-function domain_dir_url_inbound_alter(&$path, $original_path, $path_language) {
+function domain_directory_url_inbound_alter(&$path, $original_path, $path_language) {
   $_domain = domain_get_domain();
-  if (isset($_domain['domain_dir'])) {
+  if (isset($_domain['directory'])) {
     $_path = explode('/', $original_path);
-    if (empty($_path[0]) || $_path[0] != $_domain['domain_dir']) {
+    if (empty($_path[0]) || $_path[0] != $_domain['directory']) {
       return;
     }
     unset($_path[0]);
@@ -75,38 +75,38 @@ function domain_dir_url_inbound_alter(&$path, $original_path, $path_language) {
 /**
  * API wrapper callback for 7.x.2.
  */
-function domain_dir_domainload(&$domain) {
-  domain_dir_domain_load($domain);
+function domain_directory_domainload(&$domain) {
+  domain_directory_domain_load($domain);
 }
 
 /**
  * Implements hook_domain_load().
  */
-function domain_dir_domain_load(&$domain) {
+function domain_directory_domain_load(&$domain) {
   global $base_path, $base_url;
-  $dirs = &drupal_static(__FUNCTION__);
-  if (!isset($dirs)) {
-    $result = db_query("SELECT domain_id, dir FROM {domain_dir}")->FetchAll();
+  $directories = &drupal_static(__FUNCTION__);
+  if (!isset($directories)) {
+    $result = db_query("SELECT domain_id, directory FROM {domain_directory}")->FetchAll();
     foreach ($result as $data) {
-      $dirs[$data->domain_id][] = $data->dir;
+      $directories[$data->domain_id][] = $data->directory;
     }
   }
-  if (isset($dirs[$domain['domain_id']]) && !isset($domain['canonical_subdomain'])) {
+  if (isset($directories[$domain['domain_id']]) && !isset($domain['canonical_subdomain'])) {
     $temp = $base_url;
     $base_url = '';
-    $base = $dirs[$domain['domain_id']][0];
+    $base = $directories[$domain['domain_id']][0];
     $subdomain = explode('.', $domain['subdomain']);
-    foreach ($dirs[$domain['domain_id']] as $dir) {
-      if ($dir == $subdomain[0]) {
-        $domain['domain_dir'] = $dir;
+    foreach ($directories[$domain['domain_id']] as $directory) {
+      if ($directory == $subdomain[0]) {
+        $domain['directory'] = $directory;
         $domain['canonical_subdomain'] = $domain['subdomain'];
         $domain['canonical_path'] = $domain['path'];
         if (empty($base_path)) {
-          $domain['subdomain'] = str_replace($dir . '.', '', $domain['subdomain']) . '/' . $dir;
+          $domain['subdomain'] = str_replace($directory . '.', '', $domain['subdomain']) . '/' . $directory;
           $domain['path'] = domain_get_path($domain);
         }
         else {
-          $domain['subdomain'] = str_replace($dir . '.', '', $domain['subdomain']) . $base_path . $dir . '/';
+          $domain['subdomain'] = str_replace($directory . '.', '', $domain['subdomain']) . $base_path . $directory . '/';
           $domain['path'] = domain_get_path($domain);
         }
       }
@@ -118,42 +118,42 @@ function domain_dir_domain_load(&$domain) {
 /**
  * Implements hook_url_outbound_alter().
  */
-function domain_dir_url_outbound_alter(&$path, &$options, $original_path) {
+function domain_directory_url_outbound_alter(&$path, &$options, $original_path) {
   global $base_path;
 
   // Ensure that we do not modify external links.
-  if (!empty($options['external']) && domain_dir_is_external($path)) {
+  if (!empty($options['external']) && domain_directory_is_external($path)) {
     return;
   }
 
   // Try to modify internal links properly.
   $domain = domain_get_domain();
-  if (!isset($domain['domain_dir'])) {
+  if (!isset($domain['directory'])) {
     $find = '/' . $base_path;
     $path = str_replace($find, '/', $path);
   }
   elseif (!empty($options['absolute'])) {
-    $find = '/' . $base_path . $domain['domain_dir'];
+    $find = '/' . $base_path . $domain['directory'];
     if (substr_count($path, $find) > 0) {
       $path = str_replace($find, '', $path);
     }
     else {
-      $find = $base_path . $domain['domain_dir'] .'/';
+      $find = $base_path . $domain['directory'] .'/';
       $path = str_replace($find, $base_path, $path);
     }
   }
   else {
     if ($path == '<front>' || $path == variable_get('site_frontpage', 'node')) {
-      $path = $domain['domain_dir'];
+      $path = $domain['directory'];
     }
     else {
-      $path = $domain['domain_dir'] . '/' . $path;
+      $path = $domain['directory'] . '/' . $path;
     }
   }
 
   // Handle destination=foo.
-  if (isset($domain['domain_dir']) && isset($options['query']['destination'])) {
-    $options['query']['destination'] = $domain['domain_dir'] . '/' . $options['query']['destination'];
+  if (isset($domain['directory']) && isset($options['query']['destination'])) {
+    $options['query']['destination'] = $domain['directory'] . '/' . $options['query']['destination'];
   }
 
 }
@@ -161,46 +161,47 @@ function domain_dir_url_outbound_alter(&$path, &$options, $original_path) {
 /**
  * Adjust the domain editing form.
  */
-function domain_dir_form_domain_form_alter(&$form, &$form_state) {
+function domain_directory_form_domain_form_alter(&$form, &$form_state) {
   if (isset($form['#domain']['canonical_subdomain'])) {
     $form['domain']['subdomain']['#default_value'] = $form['#domain']['canonical_subdomain'];
   }
-  $form['domain']['domain_dir'] = array(
+  $form['domain']['directory'] = array(
     '#type' => 'textfield',
     '#title' => t('Directory path'),
-    '#default_value' => isset($form['#domain']['domain_dir']) ? $form['#domain']['domain_dir'] : '',
+    '#default_value' => isset($form['#domain']['directory']) ? $form['#domain']['directory'] : '',
     '#description' => t('Alternate directory path to use for this domain record. Do not include a leading or trailing slash. <p>If using a directory path, register the domain as <em>path.example.com</em>, where example.com is your primary domain.</p>'),
     '#weight' => -1,
   );
-  $form['#submit'][] = 'domain_dir_domain_form_submit';
+  $form['#submit'][] = 'domain_directory_domain_form_submit';
 }
 
 /**
  * Save domain directories.
  */
-function domain_dir_domain_form_submit(&$form, &$form_state) {
-  db_delete('domain_dir')
+function domain_directory_domain_form_submit(&$form, &$form_state) {
+  db_delete('domain_directory')
     ->condition('domain_id', $form_state['values']['domain_id'])
     ->execute();
-  if (!empty($form_state['values']['domain_dir'])) {
+  if (!empty($form_state['values']['directory'])) {
     $record = array(
       'domain_id' => $form_state['values']['domain_id'],
-      'dir' => $form_state['values']['domain_dir'],
+      'directory' => $form_state['values']['directory'],
       'is_default' => 0,
     );
-    drupal_write_record('domain_dir', $record);
+    drupal_write_record('domain_directory', $record);
   }
 }
 
 /**
  * Implements hook_domainupdate().
  *
- * When a {domain} entry is deleted also delete all related {domain_dir} entries.
+ * When a {domain} entry is deleted also delete all related {domain_directory}
+ * entries.
  */
-function domain_dir_domainupdate($op, $domain = array(), $form_state = array()) {
+function domain_directory_domainupdate($op, $domain = array(), $form_state = array()) {
   switch ($op) {
     case 'delete':
-      db_delete('domain_dir')
+      db_delete('domain_directory')
         ->condition('domain_id', $domain['domain_id'])
         ->execute();
       break;
@@ -212,10 +213,10 @@ function domain_dir_domainupdate($op, $domain = array(), $form_state = array()) 
  *
  * This fixes a known issue with the search form.
  */
-function domain_dir_drupal_goto_alter(&$path, &$options, &$http_response_code) {
+function domain_directory_drupal_goto_alter(&$path, &$options, &$http_response_code) {
   $_domain = domain_get_domain();
-  if (isset($_domain['domain_dir']) && empty($options['external']) && empty($options['absolute'])) {
-    $path = $_domain['domain_dir'] . '/' . $path;
+  if (isset($_domain['directory']) && empty($options['external']) && empty($options['absolute'])) {
+    $path = $_domain['directory'] . '/' . $path;
   }
 }
 
@@ -228,7 +229,7 @@ function domain_dir_drupal_goto_alter(&$path, &$options, &$http_response_code) {
  * @return
  *  Boolean TRUE or FALSE.
  */
-function domain_dir_is_external($path) {
+function domain_directory_is_external($path) {
   $list = &drupal_static(__FUNCTION__);
   if (empty($list)) {
     $domains = domain_domains();
