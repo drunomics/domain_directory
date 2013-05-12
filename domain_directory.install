@@ -8,8 +8,8 @@
 /**
  * Implements hook_schema().
  */
-function domain_dir_schema() {
-  $schema['domain_dir'] = array(
+function domain_directory_schema() {
+  $schema['domain_directory'] = array(
     'description' => 'Stores directory equivalents of domains.',
     'fields' => array(
       'domain_id' => array(
@@ -17,7 +17,7 @@ function domain_dir_schema() {
         'type' => 'int',
         'not null' => TRUE,
       ),
-      'dir' => array(
+      'directory' => array(
         'description' => 'System directory string.',
         'type' => 'varchar',
         'length' => '255',
@@ -31,7 +31,7 @@ function domain_dir_schema() {
         'default' => 0,
       ),
     ),
-    'primary key' => array('domain_id', 'dir'),
+    'primary key' => array('domain_id', 'directory'),
   );
   return $schema;
 }
