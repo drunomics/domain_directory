@@ -21,11 +21,8 @@ function domain_dir_domain_bootstrap_lookup($domain) {
   if ($active === FALSE) {
     return;
   }
-  $new_domain = domain_lookup($active);
-  if ($new_domain != -1 && strpos($new_domain['subdomain'],$domain['subdomain'])===0) {
-    $domain = $new_domain;
-    $domain['domain_dir'] = $dir;
-  }
+  $domain['domain_dir'] = $dir;
+
   return $domain;
 }
 
