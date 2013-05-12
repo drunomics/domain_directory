@@ -163,9 +163,9 @@ function domain_directory_url_outbound_alter(&$path, &$options, $original_path) 
  */
 function domain_directory_form_domain_form_alter(&$form, &$form_state) {
   if (isset($form['#domain']['canonical_subdomain'])) {
-    $form['domain']['subdomain']['#default_value'] = $form['#domain']['canonical_subdomain'];
+    $form['subdomain']['#default_value'] = $form['#domain']['canonical_subdomain'];
   }
-  $form['domain']['directory'] = array(
+  $form['directory'] = array(
     '#type' => 'textfield',
     '#title' => t('Directory path'),
     '#default_value' => isset($form['#domain']['directory']) ? $form['#domain']['directory'] : '',
