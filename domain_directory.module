@@ -243,3 +243,20 @@ function domain_directory_is_external($path) {
   }
   return FALSE;
 }
+
+/**
+ * Implements hook_features_api().
+ */
+function domain_directory_features_api() {
+  $components = array(
+    'domain_directory' => array(
+      'name' => t('Domain directories'),
+      'default_hook' => 'domain_directory_defaults',
+      'default_file' => FEATURES_DEFAULTS_CUSTOM,
+      'default_filename' => 'domains',
+      'feature_source' => TRUE,
+      'file' => drupal_get_path('module', 'domain_directory') .'/domain_directory.features.inc',
+    ),
+  );
+  return $components;
+}
