@@ -2,7 +2,7 @@
 
 /**
  * @file
- * Features support for Domain Alias.
+ * Features support for Domain directory.
  */
 
 /**
@@ -91,7 +91,7 @@ function domain_directory_features_rebuild($module) {
       db_delete('domain_directory')
         ->condition('domain_id', $domain_id)
         ->execute();
-      // Save the new alias records.
+      // Saves the new records.
       if (!empty($list)) {
         $record = array(
           'domain_id' => $domain_id,
