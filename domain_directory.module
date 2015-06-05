@@ -17,13 +17,12 @@ function domain_directory_domain_bootstrap_lookup($domain) {
     return;
   }
   $directory = $_path[0];
-  $active = domain_directory_check($directory);
-  if ($active === FALSE) {
-    return;
+  $domain_id = domain_directory_check($directory);
+  if ($domain_id) {
+    $domain['directory'] = $directory;
+    $domain['domain_id'] = $domain_id;
+    return $domain;
   }
-  $domain['directory'] = $directory;
-
-  return $domain;
 }
 
 /**
