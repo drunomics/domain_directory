@@ -59,6 +59,9 @@ function domain_directory_features_export_render($module_name, $data, $export = 
  */
 function domain_directory_prepare_export($machine_name) {
   $domain = domain_machine_name_load($machine_name);
+  if (!$domain) {
+    return array();
+  }
   $domain = domain_api($domain);
 
   return array('directory' => isset($domain['directory']) ? $domain['directory'] : NULL);
