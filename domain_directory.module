@@ -9,10 +9,7 @@
  * Implements hook_domain_bootstrap_lookup().
  */
 function domain_directory_domain_bootstrap_lookup($domain) {
-  global $base_path;
-  $full_uri = request_uri();
-  $request = substr($full_uri,strpos($full_uri,$base_path)+strlen($base_path));
-  $_path = explode('/', $request);
+  $_path = explode('/', $_GET['q']);
   if (empty($_path[0])) {
     return;
   }
@@ -21,6 +18,17 @@ function domain_directory_domain_bootstrap_lookup($domain) {
   if ($domain_id) {
     $domain['directory'] = $directory;
     $domain['domain_id'] = $domain_id;
+
+    // Adjust the inbound path early, before language negotiation runs.
+    unset($_path[0]);
+    if (empty($_path)) {
+      $path = variable_get('site_frontpage', 'node');
+    }
+    else {
+      $path = implode('/', $_path);
+    }
+
+    $_GET['q'] = $path;
     return $domain;
   }
 }
@@ -44,31 +52,6 @@ function domain_directory_check($directory) {
   }
   $return[$directory] = db_query("SELECT domain_id FROM {domain_directory} WHERE directory = :directory", array(':directory' => $directory))->fetchField();
   return $return[$directory];
-}
-
-/**
- * Implements hook_url_inbound_alter().
- *
- * Map the incoming directory to a domain path.
- */
-function domain_directory_url_inbound_alter(&$path, $original_path, $path_language) {
-  $_domain = domain_get_domain();
-  if (isset($_domain['directory'])) {
-    $_path = explode('/', $original_path);
-    if (empty($_path[0]) || $_path[0] != $_domain['directory']) {
-      return;
-    }
-    unset($_path[0]);
-    if (empty($_path)) {
-      $path = variable_get('site_frontpage', 'node');
-    }
-    else {
-      $path = implode('/', $_path);
-    }
-    if ($source = drupal_lookup_path('source', $path, $path_language)) {
-      $path = $source;
-    }
-  }
 }
 
 /**
@@ -118,43 +101,22 @@ function domain_directory_domain_load(&$domain) {
  * Implements hook_url_outbound_alter().
  */
 function domain_directory_url_outbound_alter(&$path, &$options, $original_path) {
-  global $base_path;
-
   // Ensure that we do not modify external links.
   if (!empty($options['external']) && domain_directory_is_external($path)) {
     return;
   }
 
-  // Try to modify internal links properly.
+  // Try to modify internal links properly unless the directory prefix is
+  // already there.
   $domain = domain_get_domain();
-  if (!isset($domain['directory'])) {
-    $find = '/' . $base_path;
-    $path = str_replace($find, '/', $path);
-  }
-  elseif (!empty($options['absolute'])) {
-    $find = '/' . $base_path . $domain['directory'];
-    if (substr_count($path, $find) > 0) {
-      $path = str_replace($find, '', $path);
-    }
-    else {
-      $find = $base_path . $domain['directory'] .'/';
-      $path = str_replace($find, $base_path, $path);
-    }
-  }
-  else {
-    if ($path == '<front>' || $path == variable_get('site_frontpage', 'node')) {
-      $path = $domain['directory'];
-    }
-    else {
-      $path = $domain['directory'] . '/' . $path;
-    }
+  if (!empty($domain['directory'])) {
+    $options['prefix'] = $domain['directory'] . '/';
   }
 
   // Handle destination=foo.
   if (isset($domain['directory']) && isset($options['query']['destination'])) {
     $options['query']['destination'] = $domain['directory'] . '/' . $options['query']['destination'];
   }
-
 }
 
 /**
@@ -204,18 +166,6 @@ function domain_directory_domainupdate($op, $domain = array(), $form_state = arr
         ->condition('domain_id', $domain['domain_id'])
         ->execute();
       break;
-  }
-}
-
-/**
- * Ensure that destinations are set properly.
- *
- * This fixes a known issue with the search form.
- */
-function domain_directory_drupal_goto_alter(&$path, &$options, &$http_response_code) {
-  $_domain = domain_get_domain();
-  if (isset($_domain['directory']) && empty($options['external']) && empty($options['absolute'])) {
-    $path = $_domain['directory'] . '/' . $path;
   }
 }
 
