@@ -106,16 +106,10 @@ function domain_directory_url_outbound_alter(&$path, &$options, $original_path) 
     return;
   }
 
-  // Try to modify internal links properly unless the directory prefix is
-  // already there.
+  // Add the prefix to internal links.
   $domain = domain_get_domain();
   if (!empty($domain['directory'])) {
     $options['prefix'] = $domain['directory'] . '/';
-  }
-
-  // Handle destination=foo.
-  if (isset($domain['directory']) && isset($options['query']['destination'])) {
-    $options['query']['destination'] = $domain['directory'] . '/' . $options['query']['destination'];
   }
 }
 
