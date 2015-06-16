@@ -88,7 +88,7 @@ function domain_directory_domain_load(&$domain) {
           $domain['path'] = domain_get_path($domain);
         }
         else {
-          $domain['subdomain'] = str_replace($directory . '.', '', $domain['subdomain']) . $base_path . $directory . '/';
+          $domain['subdomain'] = str_replace($directory . '.', '', $domain['subdomain']) . $base_path . $directory;
           $domain['path'] = domain_get_path($domain);
         }
       }
