@@ -99,6 +99,8 @@ function domain_directory_domain_load(&$domain) {
 
 /**
  * Implements hook_url_outbound_alter().
+ *
+ * Add the domain directory prefix to internal links.
  */
 function domain_directory_url_outbound_alter(&$path, &$options, $original_path) {
   // Ensure that we do not modify external links.
@@ -106,8 +108,8 @@ function domain_directory_url_outbound_alter(&$path, &$options, $original_path) 
     return;
   }
 
-  // Add the prefix to internal links.
-  $domain = domain_get_domain();
+  // Support linking to custom domains with the right prefix.
+  $domain = isset($options['domain']) ? $options['domain'] : domain_get_domain();
   if (!empty($domain['directory'])) {
     $options['prefix'] = $domain['directory'] . '/';
   }
