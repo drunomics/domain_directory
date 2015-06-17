@@ -65,7 +65,8 @@ function domain_directory_domainload(&$domain) {
  * Implements hook_domain_load().
  */
 function domain_directory_domain_load(&$domain) {
-  global $base_path, $base_url;
+  global $base_path;
+
   $directories = &drupal_static(__FUNCTION__);
   if (!isset($directories)) {
     $result = db_query("SELECT domain_id, directory FROM {domain_directory}")->FetchAll();
@@ -74,26 +75,16 @@ function domain_directory_domain_load(&$domain) {
     }
   }
   if (isset($directories[$domain['domain_id']]) && !isset($domain['canonical_subdomain'])) {
-    $temp = $base_url;
-    $base_url = '';
-    $base = $directories[$domain['domain_id']][0];
     $subdomain = explode('.', $domain['subdomain']);
     foreach ($directories[$domain['domain_id']] as $directory) {
       if ($directory == $subdomain[0]) {
         $domain['directory'] = $directory;
         $domain['canonical_subdomain'] = $domain['subdomain'];
         $domain['canonical_path'] = $domain['path'];
-        if (empty($base_path)) {
-          $domain['subdomain'] = str_replace($directory . '.', '', $domain['subdomain']) . '/' . $directory;
-          $domain['path'] = domain_get_path($domain);
-        }
-        else {
-          $domain['subdomain'] = str_replace($directory . '.', '', $domain['subdomain']) . $base_path . $directory;
-          $domain['path'] = domain_get_path($domain);
-        }
+        $domain['subdomain'] = str_replace($directory . '.', '', $domain['subdomain']) . $base_path . $directory;
+        $domain['path'] = domain_get_path($domain);
       }
     }
-    $base_url = $temp;
   }
 }
 
